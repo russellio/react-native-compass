@@ -1,13 +1,13 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import Animated, { useAnimatedStyle } from 'react-native-reanimated';
-import type { CompassTapeProps } from '../types';
+import React from "react";
+import { View, Text, StyleSheet } from "react-native";
+import Animated, { useAnimatedStyle } from "react-native-reanimated";
+import type { CompassTapeProps } from "../types";
 import {
   COMPASS_TICKS,
   DEGREE_WIDTH,
   TICK_HEIGHTS,
   FONT_SIZES,
-} from '../constants';
+} from "../constants";
 
 /**
  * CompassTape - The animated horizontal tape with tick marks
@@ -28,7 +28,7 @@ export function CompassTape({
 
   // Animated style for the tape translation
   const animatedStyle = useAnimatedStyle(() => {
-    'worklet';
+    "worklet";
     // Calculate translateX based on current heading
     // Negative because the tape moves opposite to heading direction
     // Center the tape by offsetting by half the visible degrees
@@ -44,8 +44,8 @@ export function CompassTape({
     <View style={[styles.container, { height }]}>
       <Animated.View style={[styles.tape, animatedStyle]}>
         {COMPASS_TICKS.map((tick, index) => {
-          const isCardinal = tick.type === 'cardinal';
-          const isMajor = tick.type === 'major';
+          const isCardinal = tick.type === "cardinal";
+          const isMajor = tick.type === "major";
           const tickHeight = TICK_HEIGHTS[tick.type];
 
           return (
@@ -81,7 +81,7 @@ export function CompassTape({
                         ? FONT_SIZES.cardinal
                         : FONT_SIZES.major,
                       fontFamily,
-                      fontWeight: isCardinal ? 'bold' : 'normal',
+                      fontWeight: isCardinal ? "bold" : "normal",
                     },
                   ]}
                 >
@@ -98,26 +98,26 @@ export function CompassTape({
 
 const styles = StyleSheet.create({
   container: {
-    width: '100%',
-    overflow: 'hidden',
-    justifyContent: 'flex-end',
+    width: "100%",
+    overflow: "hidden",
+    justifyContent: "flex-end",
     paddingBottom: 10,
   },
   tape: {
-    flexDirection: 'row',
-    height: '100%',
+    flexDirection: "row",
+    height: "100%",
   },
   tickContainer: {
-    position: 'absolute',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
+    position: "absolute",
+    alignItems: "center",
+    justifyContent: "flex-end",
     bottom: 0,
   },
   tickLine: {
     marginBottom: 4,
   },
   label: {
-    textAlign: 'center',
+    textAlign: "center",
     marginTop: 4,
   },
 });

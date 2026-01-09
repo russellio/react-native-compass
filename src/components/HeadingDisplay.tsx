@@ -1,8 +1,8 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import Animated, { useAnimatedProps } from 'react-native-reanimated';
-import type { HeadingDisplayProps } from '../types';
-import { FONT_SIZES } from '../constants';
+import React from "react";
+import { View, Text, StyleSheet } from "react-native";
+import Animated, { useAnimatedProps } from "react-native-reanimated";
+import type { HeadingDisplayProps } from "../types";
+import { FONT_SIZES } from "../constants";
 
 // Create an animated Text component
 const AnimatedText = Animated.createAnimatedComponent(Text);
@@ -19,7 +19,7 @@ export function HeadingDisplay({
 }: HeadingDisplayProps) {
   // Animated props for the heading value text
   const animatedTextProps = useAnimatedProps(() => {
-    'worklet';
+    "worklet";
     // Normalize heading to 0-359 range and round to nearest degree
     // Inline normalization to ensure it runs in worklet context
     const normalized = ((animatedHeading.value % 360) + 360) % 360;
@@ -61,21 +61,21 @@ export function HeadingDisplay({
 
 const styles = StyleSheet.create({
   container: {
-    position: 'absolute',
+    position: "absolute",
     top: 20,
     left: 0,
     right: 0,
-    alignItems: 'center',
+    alignItems: "center",
     zIndex: 10,
   },
   label: {
     fontSize: FONT_SIZES.headingLabel,
-    fontWeight: '600',
+    fontWeight: "600",
     letterSpacing: 1.5,
     marginBottom: 4,
   },
   value: {
     fontSize: FONT_SIZES.heading,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
 });
