@@ -28,6 +28,7 @@ export function CompassTape({
 
   // Animated style for the tape translation
   const animatedStyle = useAnimatedStyle(() => {
+    'worklet';
     // Calculate translateX based on current heading
     // Negative because the tape moves opposite to heading direction
     // Center the tape by offsetting by half the visible degrees

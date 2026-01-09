@@ -3,7 +3,6 @@ import { View, Text, StyleSheet } from 'react-native';
 import Animated, { useAnimatedProps } from 'react-native-reanimated';
 import type { HeadingDisplayProps } from '../types';
 import { FONT_SIZES } from '../constants';
-import { normalizeHeading } from '../utils/headingMath';
 
 // Create an animated Text component
 const AnimatedText = Animated.createAnimatedComponent(Text);
@@ -20,9 +19,11 @@ export function HeadingDisplay({
 }: HeadingDisplayProps) {
   // Animated props for the heading value text
   const animatedTextProps = useAnimatedProps(() => {
+    'worklet';
     // Normalize heading to 0-359 range and round to nearest degree
-    const normalizedHeading = normalizeHeading(animatedHeading.value);
-    const roundedHeading = Math.round(normalizedHeading);
+    // Inline normalization to ensure it runs in worklet context
+    const normalized = ((animatedHeading.value % 360) + 360) % 360;
+    const roundedHeading = Math.round(normalized);
 
     return {
       text: `${roundedHeading}°`,

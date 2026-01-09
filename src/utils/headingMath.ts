@@ -2,9 +2,9 @@ import type { MagnetometerData } from '../types';
 
 /**
  * Normalizes a heading to the 0-359 degree range
+ * Note: Can be used in both JS and UI thread contexts
  */
 export function normalizeHeading(heading: number): number {
-  'worklet';
   const normalized = ((heading % 360) + 360) % 360;
   return normalized;
 }

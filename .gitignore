@@ -47,13 +47,8 @@ web-build/
 # Native builds
 # (safe to ignore for a library)
 # ----------------------------------------
-android/.gradle/
-android/build/
-android/app/build/
-
-ios/build/
-ios/Pods/
-ios/Podfile.lock
+android/
+ios/
 
 # ----------------------------------------
 # Environment / secrets
