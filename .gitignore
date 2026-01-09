@@ -1,0 +1,76 @@
+# ----------------------------------------
+# OS / Editor
+# ----------------------------------------
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/
+*.log
+
+# ----------------------------------------
+# Node / Package managers
+# ----------------------------------------
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ----------------------------------------
+# Build output
+# ----------------------------------------
+dist/
+build/
+lib/
+.esbuild/
+
+# ----------------------------------------
+# TypeScript
+# ----------------------------------------
+*.tsbuildinfo
+
+# ----------------------------------------
+# Expo / React Native
+# ----------------------------------------
+.expo/
+.expo-shared/
+web-build/
+
+# Metro / RN caches
+.metro-cache/
+.haste/
+.react-native/
+
+# ----------------------------------------
+# Native builds
+# (safe to ignore for a library)
+# ----------------------------------------
+android/.gradle/
+android/build/
+android/app/build/
+
+ios/build/
+ios/Pods/
+ios/Podfile.lock
+
+# ----------------------------------------
+# Environment / secrets
+# ----------------------------------------
+.env
+.env.*
+!.env.example
+
+# ----------------------------------------
+# Coverage / testing
+# ----------------------------------------
+coverage/
+.nyc_output/
+
+# ----------------------------------------
+# Misc
+# ----------------------------------------
+tmp/
+temp/
+.cache/
