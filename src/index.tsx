@@ -2,10 +2,9 @@
  * @russellio/react-native-compass
  * A TypeScript-only React Native horizontal scrolling compass with real-time magnetometer integration
  */
-const checkType: number = 42;
-  console.log('[compass] TS check:', checkType);
+
 // Main component
-export { Compass } from './Compass';
+export { Compass } from "./Compass";
 
 // Types
 export type {
@@ -16,11 +15,11 @@ export type {
   HeadingData,
   UseCompassHeadingResult,
   UseHeadingAnimationResult,
-} from './types';
+} from "./types";
 
 // Hooks (for advanced users who want to build custom compass UIs)
-export { useCompassHeading } from './hooks/useCompassHeading';
-export { useHeadingAnimation } from './hooks/useHeadingAnimation';
+export { useCompassHeading } from "./hooks/useCompassHeading";
+export { useHeadingAnimation } from "./hooks/useHeadingAnimation";
 
 // Utilities (for advanced users who need heading calculations)
 export {
@@ -32,7 +31,7 @@ export {
   degreesToRadians,
   radiansToDegrees,
   getCardinalDirection,
-} from './utils/headingMath';
+} from "./utils/headingMath";
 
 // Constants
 export {
@@ -44,4 +43,4 @@ export {
   DEFAULT_COLORS,
   CARDINALS,
   SPRING_CONFIG,
-} from './constants';
+} from "./constants";

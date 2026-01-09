@@ -23,6 +23,16 @@ export function useCompassHeading(
   const previousHeadingRef = useRef<number>(0);
   const isInitializedRef = useRef<boolean>(false);
 
+  // Store callbacks in refs to avoid recreating the effect when they change
+  const onHeadingChangeRef = useRef(onHeadingChange);
+  const onAccuracyChangeRef = useRef(onAccuracyChange);
+
+  // Update refs when callbacks change
+  useEffect(() => {
+    onHeadingChangeRef.current = onHeadingChange;
+    onAccuracyChangeRef.current = onAccuracyChange;
+  }, [onHeadingChange, onAccuracyChange]);
+
   useEffect(() => {
     let subscription: { remove: () => void } | null = null;
 
@@ -83,8 +93,8 @@ export function useCompassHeading(
             setHeading(smoothedHeading);
 
             // Call callback if provided
-            if (onHeadingChange) {
-              onHeadingChange(smoothedHeading);
+            if (onHeadingChangeRef.current) {
+              onHeadingChangeRef.current(smoothedHeading);
             }
 
             // Note: expo-sensors doesn't provide accuracy data directly
@@ -93,8 +103,8 @@ export function useCompassHeading(
             const currentAccuracy = 0;
             setAccuracy(currentAccuracy);
 
-            if (onAccuracyChange) {
-              onAccuracyChange(currentAccuracy);
+            if (onAccuracyChangeRef.current) {
+              onAccuracyChangeRef.current(currentAccuracy);
             }
           } catch (err) {
             setError(
@@ -118,7 +128,7 @@ export function useCompassHeading(
         subscription.remove();
       }
     };
-  }, [smoothingFactor, updateInterval, onHeadingChange, onAccuracyChange]);
+  }, [smoothingFactor, updateInterval]);
 
   return {
     heading,

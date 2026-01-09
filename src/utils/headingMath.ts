@@ -4,6 +4,7 @@ import type { MagnetometerData } from '../types';
  * Normalizes a heading to the 0-359 degree range
  */
 export function normalizeHeading(heading: number): number {
+  'worklet';
   const normalized = ((heading % 360) + 360) % 360;
   return normalized;
 }
