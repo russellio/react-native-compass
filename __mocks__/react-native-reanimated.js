@@ -1,23 +1,20 @@
 // Mock for react-native-reanimated in Jest tests
 const React = require('react');
-
-// Store for SharedValues to ensure stable references
-const sharedValueStore = new WeakMap();
+const { TextInput, View, Text, Image, ScrollView } = require('react-native');
 
 const mockUseSharedValue = (initialValue) => {
   // For testing, we use a simple object that mimics SharedValue
-  const sharedValue = {
+  return {
     value: initialValue,
   };
-  return sharedValue;
 };
 
-const mockWithSpring = (toValue, config) => {
+const mockWithSpring = (toValue, _config) => {
   // In tests, withSpring immediately returns the target value
   return toValue;
 };
 
-const mockWithTiming = (toValue, config) => {
+const mockWithTiming = (toValue, _config) => {
   return toValue;
 };
 
@@ -30,19 +27,45 @@ const mockUseDerivedValue = (callback) => {
   return mockUseSharedValue(callback());
 };
 
-// Mock createAnimatedComponent
+const mockUseAnimatedProps = (propsCallback) => {
+  // Return the result of the props callback for testing
+  // This simulates the animated props being applied
+  return propsCallback();
+};
+
+const mockUseAnimatedReaction = (_prepare, _react, _deps) => {
+  // No-op for tests
+};
+
+const mockRunOnJS = (fn) => fn;
+
+// Mock createAnimatedComponent - use actual React Native components
 const mockCreateAnimatedComponent = (Component) => {
   return React.forwardRef((props, ref) => {
-    return React.createElement(Component, { ...props, ref });
+    // For TextInput with animatedProps, extract the text/defaultValue
+    const { animatedProps, ...restProps } = props;
+    const mergedProps = { ...restProps };
+
+    // Apply animated props if present
+    if (animatedProps) {
+      if (animatedProps.text !== undefined) {
+        mergedProps.value = animatedProps.text;
+      }
+      if (animatedProps.defaultValue !== undefined && !mergedProps.defaultValue) {
+        mergedProps.defaultValue = animatedProps.defaultValue;
+      }
+    }
+
+    return React.createElement(Component, { ...mergedProps, ref });
   });
 };
 
-// Animated components namespace
+// Animated components namespace - use actual RN components
 const Animated = {
-  View: mockCreateAnimatedComponent('View'),
-  Text: mockCreateAnimatedComponent('Text'),
-  Image: mockCreateAnimatedComponent('Image'),
-  ScrollView: mockCreateAnimatedComponent('ScrollView'),
+  View: mockCreateAnimatedComponent(View),
+  Text: mockCreateAnimatedComponent(Text),
+  Image: mockCreateAnimatedComponent(Image),
+  ScrollView: mockCreateAnimatedComponent(ScrollView),
   createAnimatedComponent: mockCreateAnimatedComponent,
 };
 
@@ -52,6 +75,9 @@ module.exports = {
   withTiming: mockWithTiming,
   useAnimatedStyle: mockUseAnimatedStyle,
   useDerivedValue: mockUseDerivedValue,
+  useAnimatedProps: mockUseAnimatedProps,
+  useAnimatedReaction: mockUseAnimatedReaction,
+  runOnJS: mockRunOnJS,
   createAnimatedComponent: mockCreateAnimatedComponent,
   default: Animated,
   ...Animated,

@@ -1,15 +1,19 @@
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
-import Animated, { useAnimatedProps } from "react-native-reanimated";
+import { View, Text, TextInput, StyleSheet } from "react-native";
+import Animated, {
+  useAnimatedProps,
+  useDerivedValue,
+} from "react-native-reanimated";
 import type { HeadingDisplayProps } from "../types";
 import { FONT_SIZES } from "../constants";
 
-// Create an animated Text component
-const AnimatedText = Animated.createAnimatedComponent(Text);
+// Create an animated TextInput component
+// TextInput has a 'text' prop that can be animated, unlike Text which only has children
+const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
 
 /**
  * HeadingDisplay - Static overlay showing "HEADING" label and current degree value
- * Uses Reanimated to update the text content on the UI thread
+ * Uses Reanimated to update the text content on the UI thread without re-renders
  */
 export function HeadingDisplay({
   animatedHeading,
@@ -17,17 +21,23 @@ export function HeadingDisplay({
   headingValueColor,
   fontFamily,
 }: HeadingDisplayProps) {
-  // Animated props for the heading value text
-  const animatedTextProps = useAnimatedProps(() => {
+  // Derive the display text from the animated heading value
+  const displayText = useDerivedValue(() => {
     "worklet";
     // Normalize heading to 0-359 range and round to nearest degree
-    // Inline normalization to ensure it runs in worklet context
     const normalized = ((animatedHeading.value % 360) + 360) % 360;
     const roundedHeading = Math.round(normalized);
+    return `${roundedHeading}°`;
+  });
 
+  // Animated props for the TextInput - runs on UI thread
+  const animatedTextProps = useAnimatedProps(() => {
+    "worklet";
     return {
-      text: `${roundedHeading}°`,
-    } as any;
+      text: displayText.value,
+      // defaultValue needed for Android compatibility
+      defaultValue: displayText.value,
+    };
   });
 
   return (
@@ -37,24 +47,29 @@ export function HeadingDisplay({
           styles.label,
           {
             color: headingLabelColor,
-            fontFamily,
           },
+          fontFamily ? { fontFamily } : undefined,
         ]}
       >
         HEADING
       </Text>
-      <AnimatedText
+      <AnimatedTextInput
         style={[
           styles.value,
           {
             color: headingValueColor,
-            fontFamily,
           },
+          fontFamily ? { fontFamily } : undefined,
         ]}
         animatedProps={animatedTextProps}
-      >
-        0°
-      </AnimatedText>
+        editable={false}
+        caretHidden={true}
+        // Prevent text selection
+        selectTextOnFocus={false}
+        contextMenuHidden={true}
+        // Default value for initial render
+        defaultValue="0°"
+      />
     </View>
   );
 }
@@ -77,5 +92,11 @@ const styles = StyleSheet.create({
   value: {
     fontSize: FONT_SIZES.heading,
     fontWeight: "bold",
+    // TextInput-specific styles to match Text appearance
+    padding: 0,
+    margin: 0,
+    textAlign: "center",
+    // Remove underline on Android
+    borderBottomWidth: 0,
   },
 });

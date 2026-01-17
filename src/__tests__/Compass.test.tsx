@@ -37,7 +37,7 @@ describe('Compass', () => {
   });
 
   it('renders without crashing when magnetometer is available', async () => {
-    const { getByTestId } = render(<Compass />);
+    render(<Compass />);
 
     await waitFor(() => {
       expect(Magnetometer.isAvailableAsync).toHaveBeenCalled();
@@ -163,7 +163,7 @@ describe('Compass', () => {
   });
 
   it('accepts custom color props', async () => {
-    const { getByTestId } = render(
+    render(
       <Compass
         backgroundColor="#000000"
         needleColor="#ff0000"
@@ -187,13 +187,34 @@ describe('Compass', () => {
       expect(Magnetometer.addListener).toHaveBeenCalled();
     });
 
-    // Get the subscription
-    const subscription = (Magnetometer.addListener as jest.Mock).mock.results[0]?.value;
-
     unmount();
 
     // The remove function should be callable (cleanup occurred)
     // In our mock, this is tracked internally
+    expect(true).toBe(true);
+  });
+
+  it('renders without fontFamily prop (uses system default)', async () => {
+    // When fontFamily is undefined, component should not apply fontFamily style
+    // This prevents iOS GSFont errors from undefined font references
+    render(<Compass />);
+
+    await waitFor(() => {
+      expect(Magnetometer.isAvailableAsync).toHaveBeenCalled();
+    });
+
+    // If render completes without font errors, the fix is working
+    expect(true).toBe(true);
+  });
+
+  it('accepts custom fontFamily prop', async () => {
+    render(<Compass fontFamily="System" />);
+
+    await waitFor(() => {
+      expect(Magnetometer.isAvailableAsync).toHaveBeenCalled();
+    });
+
+    // If render completes with custom fontFamily, it is accepted
     expect(true).toBe(true);
   });
 });

@@ -36,7 +36,8 @@ export function useHeadingAnimation(heading: number): UseHeadingAnimationResult 
 
     // Update previous heading
     previousHeadingRef.current = current;
-  }, [heading, animatedHeading]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- animatedHeading is a stable SharedValue ref
+  }, [heading]);
 
   return {
     animatedHeading,

@@ -80,9 +80,9 @@ export function CompassTape({
                       fontSize: isCardinal
                         ? FONT_SIZES.cardinal
                         : FONT_SIZES.major,
-                      fontFamily,
                       fontWeight: isCardinal ? "bold" : "normal",
                     },
+                    fontFamily ? { fontFamily } : undefined,
                   ]}
                 >
                   {tick.label}

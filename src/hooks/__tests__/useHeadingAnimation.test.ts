@@ -88,7 +88,7 @@ describe('useHeadingAnimation', () => {
   });
 
   it('should not exceed maximum update depth with rapid changes', () => {
-    const { result, rerender } = renderHook(
+    const { rerender } = renderHook(
       ({ heading }) => useHeadingAnimation(heading),
       { initialProps: { heading: 0 } }
     );
