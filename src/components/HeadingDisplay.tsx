@@ -1,9 +1,6 @@
 import React from "react";
-import { View, Text, TextInput, StyleSheet } from "react-native";
-import Animated, {
-  useAnimatedProps,
-  useDerivedValue,
-} from "react-native-reanimated";
+import { View, Text, TextInput, StyleSheet, TextInputProps } from "react-native";
+import Animated, { useAnimatedProps } from "react-native-reanimated";
 import type { HeadingDisplayProps } from "../types";
 import { FONT_SIZES } from "../constants";
 
@@ -14,6 +11,9 @@ const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
 /**
  * HeadingDisplay - Static overlay showing "HEADING" label and current degree value
  * Uses Reanimated to update the text content on the UI thread without re-renders
+ *
+ * Simplified to use a single animation layer to prevent micro-updates on Android
+ * that can contribute to "Maximum update depth exceeded" errors.
  */
 export function HeadingDisplay({
   animatedHeading,
@@ -21,22 +21,17 @@ export function HeadingDisplay({
   headingValueColor,
   fontFamily,
 }: HeadingDisplayProps) {
-  // Derive the display text from the animated heading value
-  const displayText = useDerivedValue(() => {
+  // Animated props for the TextInput - runs on UI thread
+  // Single animation layer: directly format the string in useAnimatedProps
+  // Type assertion needed because Reanimated's types don't include 'text' prop
+  // which is a valid TextInput prop on both iOS and Android
+  const animatedTextProps = useAnimatedProps<TextInputProps & { text?: string }>(() => {
     "worklet";
     // Normalize heading to 0-359 range and round to nearest degree
     const normalized = ((animatedHeading.value % 360) + 360) % 360;
     const roundedHeading = Math.round(normalized);
-    return `${roundedHeading}°`;
-  });
-
-  // Animated props for the TextInput - runs on UI thread
-  const animatedTextProps = useAnimatedProps(() => {
-    "worklet";
     return {
-      text: displayText.value,
-      // defaultValue needed for Android compatibility
-      defaultValue: displayText.value,
+      text: `${roundedHeading}°`,
     };
   });
 
@@ -67,8 +62,8 @@ export function HeadingDisplay({
         // Prevent text selection
         selectTextOnFocus={false}
         contextMenuHidden={true}
-        // Default value for initial render
-        defaultValue="0°"
+        // Static placeholder for initial render (not animated)
+        defaultValue="---°"
       />
     </View>
   );

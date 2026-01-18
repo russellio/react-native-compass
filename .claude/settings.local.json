@@ -4,7 +4,8 @@
       "Bash(npm run prepare:*)",
       "Bash(yarn prepare)",
       "Bash(npx eslint:*)",
-      "Bash(npx metro build:*)"
+      "Bash(npx metro build:*)",
+      "Bash(npx jest --clearCache)"
     ]
   }
 }

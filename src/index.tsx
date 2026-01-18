@@ -13,7 +13,6 @@ export type {
   TickType,
   MagnetometerData,
   HeadingData,
-  UseCompassHeadingResult,
   UseHeadingAnimationResult,
 } from "./types";
 

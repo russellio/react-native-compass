@@ -23,6 +23,17 @@ export interface CompassProps {
   updateInterval?: number; // Default: 16ms
 
   // Callbacks
+  /**
+   * Called when heading changes (at 60Hz by default).
+   *
+   * WARNING: This callback fires at 60Hz (every 16ms) when the magnetometer is active.
+   * To prevent excessive re-renders in your app:
+   * - Use useCallback() to memoize your handler
+   * - Consider throttling state updates (e.g., to 10Hz) if displaying in your UI
+   * - Avoid triggering re-renders of large component trees from this callback
+   *
+   * @param heading - Smoothed heading value in degrees (0-359)
+   */
   onHeadingChange?: (heading: number) => void;
   onAccuracyChange?: (accuracy: number) => void;
 
@@ -100,16 +111,6 @@ export interface ErrorViewProps {
   message: string;
   backgroundColor: string;
   textColor: string;
-}
-
-/**
- * Hook return type for useCompassHeading
- */
-export interface UseCompassHeadingResult {
-  heading: number;
-  accuracy: number;
-  error: string | null;
-  isAvailable: boolean;
 }
 
 /**

@@ -3,8 +3,8 @@ import { render, waitFor, act } from '@testing-library/react-native';
 import { Compass } from '../Compass';
 import { Magnetometer } from 'expo-sensors';
 
-// Mock expo-sensors
-jest.mock('expo-sensors');
+// Mock expo-sensors with factory function to bypass Jest's auto-mocking
+jest.mock('expo-sensors', () => jest.requireActual('../../__mocks__/expo-sensors'));
 
 // Mock react-native-svg
 jest.mock('react-native-svg', () => {
@@ -23,17 +23,15 @@ jest.mock('react-native-svg', () => {
   };
 });
 
-// Get the mocked module
-const mockedMagnetometer = Magnetometer as jest.Mocked<typeof Magnetometer> & {
-  __simulateReading: (data: { x: number; y: number; z: number }) => void;
-  __setAvailable: (available: boolean) => void;
-  __setPermissionStatus: (status: string) => void;
-  __reset: () => void;
-};
+// Import test helpers from the mock module
+const { __magnetometerTestHelpers } = require('expo-sensors');
+
+// Get the mocked Magnetometer
+const mockedMagnetometer = Magnetometer as jest.Mocked<typeof Magnetometer>;
 
 describe('Compass', () => {
   beforeEach(() => {
-    mockedMagnetometer.__reset();
+    __magnetometerTestHelpers.reset();
   });
 
   it('renders without crashing when magnetometer is available', async () => {
@@ -45,7 +43,7 @@ describe('Compass', () => {
   });
 
   it('renders error view when magnetometer is unavailable', async () => {
-    mockedMagnetometer.__setAvailable(false);
+    __magnetometerTestHelpers.setAvailable(false);
 
     const { findByText } = render(<Compass />);
 
@@ -66,7 +64,7 @@ describe('Compass', () => {
     await act(async () => {
       for (let i = 0; i < 100; i++) {
         const angle = (i * 3.6) * (Math.PI / 180); // Convert to radians
-        mockedMagnetometer.__simulateReading({
+        __magnetometerTestHelpers.simulateReading({
           x: Math.cos(angle),
           y: -Math.sin(angle),
           z: 0,
@@ -75,7 +73,7 @@ describe('Compass', () => {
     });
 
     // If we got here without Maximum Update Depth error, test passes
-    expect(true).toBe(true);
+    expect(onHeadingChange).toHaveBeenCalled();
   });
 
   it('handles 0/360 degree boundary crossing without issues', async () => {
@@ -90,18 +88,18 @@ describe('Compass', () => {
     // Simulate crossing 0/360 boundary multiple times
     await act(async () => {
       // Start near 360
-      mockedMagnetometer.__simulateReading({ x: 0, y: -1, z: 0 }); // ~0°
+      __magnetometerTestHelpers.simulateReading({ x: 0, y: -1, z: 0 }); // ~0°
 
       // Cross to near 360
-      mockedMagnetometer.__simulateReading({ x: 0.1, y: -1, z: 0 }); // ~355°
+      __magnetometerTestHelpers.simulateReading({ x: 0.1, y: -1, z: 0 }); // ~355°
 
       // Cross back to near 0
-      mockedMagnetometer.__simulateReading({ x: -0.1, y: -1, z: 0 }); // ~5°
+      __magnetometerTestHelpers.simulateReading({ x: -0.1, y: -1, z: 0 }); // ~5°
 
       // Rapid crossing
       for (let i = 0; i < 10; i++) {
         const offset = i % 2 === 0 ? 0.1 : -0.1;
-        mockedMagnetometer.__simulateReading({ x: offset, y: -1, z: 0 });
+        __magnetometerTestHelpers.simulateReading({ x: offset, y: -1, z: 0 });
       }
     });
 
@@ -121,7 +119,7 @@ describe('Compass', () => {
     // The magnetometer listener is registered, simulating readings should not throw
     await act(async () => {
       // Simulate a heading of approximately 90° (East)
-      mockedMagnetometer.__simulateReading({ x: 1, y: 0, z: 0 });
+      __magnetometerTestHelpers.simulateReading({ x: 1, y: 0, z: 0 });
     });
 
     // Test passes if we get here without errors
@@ -148,7 +146,7 @@ describe('Compass', () => {
     // Simulate 50 magnetometer readings
     await act(async () => {
       for (let i = 0; i < 50; i++) {
-        mockedMagnetometer.__simulateReading({
+        __magnetometerTestHelpers.simulateReading({
           x: Math.cos(i * 0.1),
           y: -Math.sin(i * 0.1),
           z: 0,
@@ -157,9 +155,47 @@ describe('Compass', () => {
     });
 
     // Renders should be bounded (not infinite)
-    // A reasonable upper bound would be around 100 additional renders for 50 updates
+    // With the new architecture, Compass manages internal state,
+    // so it will re-render, but renders should still be bounded
     const additionalRenders = renderCount - initialRenderCount;
     expect(additionalRenders).toBeLessThan(200);
+  });
+
+  it('survives 100 rapid updates without "Maximum update depth exceeded"', async () => {
+    // This test specifically validates the fix for the root cause
+    // of the Maximum Update Depth error
+    const onHeadingChange = jest.fn();
+    let errorOccurred = false;
+
+    // Wrap in try-catch to detect Maximum update depth error
+    try {
+      render(<Compass onHeadingChange={onHeadingChange} />);
+
+      await waitFor(() => {
+        expect(Magnetometer.addListener).toHaveBeenCalled();
+      });
+
+      // Simulate 100 rapid readings (simulating ~1.7 seconds at 60Hz)
+      await act(async () => {
+        for (let i = 0; i < 100; i++) {
+          const angle = (i * 3.6) * (Math.PI / 180);
+          __magnetometerTestHelpers.simulateReading({
+            x: Math.cos(angle),
+            y: -Math.sin(angle),
+            z: 0,
+          });
+        }
+      });
+    } catch (error: any) {
+      if (error.message?.includes('Maximum update depth exceeded')) {
+        errorOccurred = true;
+      } else {
+        throw error; // Re-throw other errors
+      }
+    }
+
+    expect(errorOccurred).toBe(false);
+    expect(onHeadingChange.mock.calls.length).toBeGreaterThan(0);
   });
 
   it('accepts custom color props', async () => {
@@ -216,5 +252,52 @@ describe('Compass', () => {
 
     // If render completes with custom fontFamily, it is accepted
     expect(true).toBe(true);
+  });
+
+  it('calls onHeadingChange with valid heading values', async () => {
+    const headings: number[] = [];
+    const onHeadingChange = (heading: number) => {
+      headings.push(heading);
+    };
+
+    render(<Compass onHeadingChange={onHeadingChange} />);
+
+    await waitFor(() => {
+      expect(Magnetometer.addListener).toHaveBeenCalled();
+    });
+
+    // Simulate readings for various directions
+    await act(async () => {
+      __magnetometerTestHelpers.simulateReading({ x: 0, y: -1, z: 0 }); // North
+      __magnetometerTestHelpers.simulateReading({ x: 1, y: 0, z: 0 });  // East
+      __magnetometerTestHelpers.simulateReading({ x: 0, y: 1, z: 0 });  // South
+      __magnetometerTestHelpers.simulateReading({ x: -1, y: 0, z: 0 }); // West
+    });
+
+    // Verify that headings were received
+    expect(headings.length).toBeGreaterThan(0);
+
+    // All headings should be valid numbers between 0 and 360
+    headings.forEach((heading) => {
+      expect(Number.isFinite(heading)).toBe(true);
+      expect(heading).toBeGreaterThanOrEqual(0);
+      expect(heading).toBeLessThan(360);
+    });
+  });
+
+  it('calls onAccuracyChange callback', async () => {
+    const onAccuracyChange = jest.fn();
+
+    render(<Compass onAccuracyChange={onAccuracyChange} />);
+
+    await waitFor(() => {
+      expect(Magnetometer.addListener).toHaveBeenCalled();
+    });
+
+    await act(async () => {
+      __magnetometerTestHelpers.simulateReading({ x: 0, y: -1, z: 0 });
+    });
+
+    expect(onAccuracyChange).toHaveBeenCalled();
   });
 });

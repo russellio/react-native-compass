@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, StyleSheet } from 'react-native';
 import type { CompassProps } from './types';
 import { useCompassHeading } from './hooks/useCompassHeading';
@@ -59,16 +59,43 @@ export function Compass({
   // Style
   style,
 }: CompassProps) {
-  // Get heading from magnetometer with EMA smoothing
-  const { heading, accuracy, error, isAvailable } = useCompassHeading(
+  // Internal state for managing compass data
+  // This localizes the 60Hz updates to the Compass component
+  const [error, setError] = useState<string | null>(null);
+  const [isAvailable, setIsAvailable] = useState<boolean>(false);
+  const [currentHeading, setCurrentHeading] = useState<number>(0);
+
+  // Create stable callbacks to avoid recreating the magnetometer subscription
+  const handleHeadingChange = useCallback((heading: number) => {
+    setCurrentHeading(heading);
+    onHeadingChange?.(heading);
+  }, [onHeadingChange]);
+
+  const handleAccuracyChange = useCallback((accuracy: number) => {
+    onAccuracyChange?.(accuracy);
+  }, [onAccuracyChange]);
+
+  const handleError = useCallback((errorMessage: string) => {
+    setError(errorMessage);
+  }, []);
+
+  const handleAvailabilityChange = useCallback((available: boolean) => {
+    setIsAvailable(available);
+    if (available) setError(null);
+  }, []);
+
+  // Subscribe to magnetometer with stable callbacks (stateless hook)
+  useCompassHeading(
     smoothingFactor,
     updateInterval,
-    onHeadingChange,
-    onAccuracyChange
+    handleHeadingChange,
+    handleAccuracyChange,
+    handleError,
+    handleAvailabilityChange
   );
 
   // Apply spring animation to heading changes
-  const { animatedHeading } = useHeadingAnimation(heading);
+  const { animatedHeading } = useHeadingAnimation(currentHeading);
 
   // Show error view if magnetometer is not available or there's an error
   if (!isAvailable || error) {

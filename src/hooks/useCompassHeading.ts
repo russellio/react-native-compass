@@ -1,24 +1,31 @@
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { Magnetometer } from 'expo-sensors';
-import type { UseCompassHeadingResult } from '../types';
 import { calculateHeading, applyEMA } from '../utils/headingMath';
 import { DEFAULT_SMOOTHING, DEFAULT_UPDATE_INTERVAL } from '../constants';
 
 /**
  * Custom hook for tracking device heading using magnetometer
  * Applies Exponential Moving Average (EMA) smoothing for stable readings
+ *
+ * This is a stateless hook that communicates via callbacks only.
+ * It does not maintain internal React state to avoid cascading re-renders
+ * when used with 60Hz magnetometer updates.
+ *
+ * @param smoothingFactor - EMA smoothing factor (0-1), default 0.2
+ * @param updateInterval - Magnetometer update interval in ms, default 16ms (60Hz)
+ * @param onHeadingChange - Callback fired at 60Hz with smoothed heading (0-359)
+ * @param onAccuracyChange - Callback for accuracy changes
+ * @param onError - Callback for error messages
+ * @param onAvailabilityChange - Callback for sensor availability changes
  */
 export function useCompassHeading(
   smoothingFactor: number = DEFAULT_SMOOTHING,
   updateInterval: number = DEFAULT_UPDATE_INTERVAL,
   onHeadingChange?: (heading: number) => void,
-  onAccuracyChange?: (accuracy: number) => void
-): UseCompassHeadingResult {
-  const [heading, setHeading] = useState<number>(0);
-  const [accuracy, setAccuracy] = useState<number>(0);
-  const [error, setError] = useState<string | null>(null);
-  const [isAvailable, setIsAvailable] = useState<boolean>(false);
-
+  onAccuracyChange?: (accuracy: number) => void,
+  onError?: (error: string) => void,
+  onAvailabilityChange?: (isAvailable: boolean) => void
+): void {
   // Use ref to store previous heading for smoothing without causing re-renders
   const previousHeadingRef = useRef<number>(0);
   const isInitializedRef = useRef<boolean>(false);
@@ -26,12 +33,16 @@ export function useCompassHeading(
   // Store callbacks in refs to avoid recreating the effect when they change
   const onHeadingChangeRef = useRef(onHeadingChange);
   const onAccuracyChangeRef = useRef(onAccuracyChange);
+  const onErrorRef = useRef(onError);
+  const onAvailabilityChangeRef = useRef(onAvailabilityChange);
 
   // Update refs when callbacks change
   useEffect(() => {
     onHeadingChangeRef.current = onHeadingChange;
     onAccuracyChangeRef.current = onAccuracyChange;
-  }, [onHeadingChange, onAccuracyChange]);
+    onErrorRef.current = onError;
+    onAvailabilityChangeRef.current = onAvailabilityChange;
+  }, [onHeadingChange, onAccuracyChange, onError, onAvailabilityChange]);
 
   useEffect(() => {
     let subscription: { remove: () => void } | null = null;
@@ -42,19 +53,18 @@ export function useCompassHeading(
         const available = await Magnetometer.isAvailableAsync();
 
         if (!available) {
-          setError('Magnetometer sensor is not available on this device');
-          setIsAvailable(false);
+          onErrorRef.current?.('Magnetometer sensor is not available on this device');
+          onAvailabilityChangeRef.current?.(false);
           return;
         }
 
-        setIsAvailable(true);
-        setError(null);
+        onAvailabilityChangeRef.current?.(true);
 
         // Request permissions (required on iOS)
         try {
           const { status } = await Magnetometer.requestPermissionsAsync();
           if (status !== 'granted') {
-            setError('Location permission is required for magnetometer access on iOS');
+            onErrorRef.current?.('Location permission is required for magnetometer access on iOS');
             return;
           }
         } catch (permError) {
@@ -89,34 +99,25 @@ export function useCompassHeading(
             // Update previous heading for next smoothing
             previousHeadingRef.current = smoothedHeading;
 
-            // Update state
-            setHeading(smoothedHeading);
-
-            // Call callback if provided
-            if (onHeadingChangeRef.current) {
-              onHeadingChangeRef.current(smoothedHeading);
-            }
+            // Call heading callback if provided
+            onHeadingChangeRef.current?.(smoothedHeading);
 
             // Note: expo-sensors doesn't provide accuracy data directly
             // On Android, accuracy would come from magnetometer uncalibrated sensor
             // For now, we'll use a fixed value. This could be enhanced later.
             const currentAccuracy = 0;
-            setAccuracy(currentAccuracy);
-
-            if (onAccuracyChangeRef.current) {
-              onAccuracyChangeRef.current(currentAccuracy);
-            }
+            onAccuracyChangeRef.current?.(currentAccuracy);
           } catch (err) {
-            setError(
+            onErrorRef.current?.(
               err instanceof Error ? err.message : 'Error processing magnetometer data'
             );
           }
         });
       } catch (err) {
-        setError(
+        onErrorRef.current?.(
           err instanceof Error ? err.message : 'Failed to initialize magnetometer'
         );
-        setIsAvailable(false);
+        onAvailabilityChangeRef.current?.(false);
       }
     };
 
@@ -129,11 +130,4 @@ export function useCompassHeading(
       }
     };
   }, [smoothingFactor, updateInterval]);
-
-  return {
-    heading,
-    accuracy,
-    error,
-    isAvailable,
-  };
 }

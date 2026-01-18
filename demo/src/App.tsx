@@ -1,10 +1,13 @@
-import React, { useState } from "react";
+import React, { useState, useCallback, useRef } from "react";
 import { ScrollView, StyleSheet, Text, View, StatusBar } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { Compass } from "@russellio/react-native-compass";
 import { DemoControls } from "./DemoControls";
 import { DebugPanel } from "./DebugPanel";
 import { CalibrationInstructions } from "./CalibrationInstructions";
+
+// Throttle UI updates to 10Hz to prevent excessive re-renders
+const THROTTLE_MS = 100;
 
 export default function App() {
   const [visibleDegrees, setVisibleDegrees] = useState(120);
@@ -13,6 +16,20 @@ export default function App() {
   const [currentHeading, setCurrentHeading] = useState(0);
   const [accuracy, setAccuracy] = useState(0);
   const [showCalibration, setShowCalibration] = useState(false);
+
+  // Ref to track last update time for throttling
+  const lastUpdateRef = useRef<number>(0);
+
+  // Throttled heading change handler
+  // The Compass fires onHeadingChange at 60Hz, but we only update UI at 10Hz
+  // to prevent excessive re-renders of the demo app
+  const handleHeadingChange = useCallback((heading: number) => {
+    const now = Date.now();
+    if (now - lastUpdateRef.current >= THROTTLE_MS) {
+      setCurrentHeading(heading);
+      lastUpdateRef.current = now;
+    }
+  }, []);
 
   return (
     <SafeAreaProvider style={styles.container}>
@@ -31,7 +48,7 @@ export default function App() {
             visibleDegrees={visibleDegrees}
             smoothingFactor={smoothingFactor}
             showNumericLabels={showNumericLabels}
-            onHeadingChange={setCurrentHeading}
+            onHeadingChange={handleHeadingChange}
             onAccuracyChange={setAccuracy}
           />
         </View>
