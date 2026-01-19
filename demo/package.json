@@ -13,6 +13,7 @@
     "@react-native-community/slider": "5.0.1",
     "@react-native/virtualized-lists": "^0.81.5",
     "@russellio/react-native-compass": "../",
+    "adb": "^0.2.0",
     "expo": "^54.0.0",
     "expo-asset": "~12.0.12",
     "expo-constants": "~18.0.13",
