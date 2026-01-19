@@ -41,7 +41,7 @@ export function CompassTape({
   });
 
   return (
-    <View style={[styles.container, { height }]}>
+    <View style={[styles.container, { height }]} testID="compass-tape">
       <Animated.View style={[styles.tape, animatedStyle]}>
         {COMPASS_TICKS.map((tick, index) => {
           const isCardinal = tick.type === "cardinal";

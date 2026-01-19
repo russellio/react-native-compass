@@ -61,6 +61,14 @@ describe('headingMath utilities', () => {
     it('defensively handles malformed vectors', () => {
       expect(() => calculateHeading({ x: NaN as any, y: 0 } as any)).toThrow();
     });
+
+    it('handles zero vector defensively', () => {
+      expect(() => calculateHeading({ x: 0, y: 0, z: 0 })).toThrow();
+    });
+
+    it('handles extreme values', () => {
+      expect(() => calculateHeading({ x: 1e10, y: 1e10, z: 0 })).not.toThrow();
+    });
   });
 
   describe('shouldWrapHeading', () => {
@@ -106,6 +114,17 @@ describe('headingMath utilities', () => {
       const dist = shortestAngularDistance(350, out);
       expect(Math.abs(dist)).toBeLessThan(15);
     });
+
+    it('handles NaN inputs gracefully', () => {
+      expect(applyEMA(0.5, NaN, 100)).toBeCloseTo(100); // previous NaN, return current
+      expect(applyEMA(0.5, 100, NaN)).toBeCloseTo(100); // current NaN, return previous
+      expect(applyEMA(NaN, 100, 200)).toBeCloseTo(200); // alpha NaN, return current
+    });
+
+    it('handles infinite values', () => {
+      expect(applyEMA(0.5, Infinity, 100)).toBeCloseTo(100);
+      expect(applyEMA(0.5, 100, -Infinity)).toBeCloseTo(100);
+    });
   });
 
   describe('getCardinalDirection', () => {
@@ -137,3 +156,4 @@ describe('headingMath utilities', () => {
     });
   });
 });
+

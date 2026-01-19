@@ -111,7 +111,7 @@ export function Compass({
   }
 
   return (
-    <View style={[styles.container, { backgroundColor, height }, style]}>
+    <View style={[styles.container, { backgroundColor, height }, style]} testID="compass-container">
       {/* Heading display overlay */}
       <HeadingDisplay
         animatedHeading={animatedHeading}

@@ -258,4 +258,47 @@ describe('useCompassHeading', () => {
     // Callback count should not increase after unmount
     expect(onHeadingChange.mock.calls.length).toBe(callCountBeforeUnmount);
   });
+
+  it('should handle denied permissions gracefully', async () => {
+    __magnetometerTestHelpers.setPermissionStatus('denied');
+
+    const onError = jest.fn();
+
+    renderHook(() =>
+      useCompassHeading(0.2, 16, undefined, undefined, onError)
+    );
+
+    await waitFor(() => {
+      expect(onError).toHaveBeenCalledWith('Location permission is required for magnetometer access on iOS');
+    });
+
+    // Ensure no listener is added
+    expect(Magnetometer.addListener).not.toHaveBeenCalled();
+  });
+
+  it('should continue if permission request throws (missing API)', async () => {
+    // Mock requestPermissionsAsync to throw
+    const originalRequest = Magnetometer.requestPermissionsAsync;
+    Magnetometer.requestPermissionsAsync.mockImplementationOnce(() => Promise.reject(new Error('Not available')));
+
+    const onHeadingChange = jest.fn();
+
+    renderHook(() =>
+      useCompassHeading(0.2, 16, onHeadingChange)
+    );
+
+    await waitFor(() => {
+      expect(Magnetometer.addListener).toHaveBeenCalled();
+    });
+
+    // Simulate reading to ensure it works
+    await act(async () => {
+      __magnetometerTestHelpers.simulateReading({ x: 0, y: -1, z: 0 });
+    });
+
+    expect(onHeadingChange).toHaveBeenCalled();
+
+    // Restore
+    Magnetometer.requestPermissionsAsync = originalRequest;
+  });
 });

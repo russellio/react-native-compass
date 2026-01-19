@@ -11,7 +11,7 @@ export function CompassNeedle({ needleColor, height }: CompassNeedleProps) {
   const needleSize = 20;
 
   return (
-    <View style={[styles.container, { height }]} pointerEvents="none">
+    <View style={[styles.container, { height }]} pointerEvents="none" testID="compass-needle">
       <View style={styles.needleWrapper}>
         <Svg height={needleSize} width={needleSize}>
           <Polygon

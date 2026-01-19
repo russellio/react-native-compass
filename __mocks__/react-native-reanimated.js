@@ -1,6 +1,7 @@
 // Mock for react-native-reanimated in Jest tests
 const React = require('react');
-const { TextInput, View, Text, Image, ScrollView } = require('react-native');
+// Import from the mocked react-native
+const { View, Text, TextInput, Image, ScrollView } = require('./react-native');
 
 const mockUseSharedValue = (initialValue) => {
   // For testing, we use a simple object that mimics SharedValue
@@ -64,12 +65,14 @@ const mockCreateAnimatedComponent = (Component) => {
 const Animated = {
   View: mockCreateAnimatedComponent(View),
   Text: mockCreateAnimatedComponent(Text),
+  TextInput: mockCreateAnimatedComponent(TextInput),
   Image: mockCreateAnimatedComponent(Image),
   ScrollView: mockCreateAnimatedComponent(ScrollView),
   createAnimatedComponent: mockCreateAnimatedComponent,
 };
 
 module.exports = {
+  __esModule: true,
   useSharedValue: mockUseSharedValue,
   withSpring: mockWithSpring,
   withTiming: mockWithTiming,

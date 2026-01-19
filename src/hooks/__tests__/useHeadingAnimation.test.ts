@@ -1,6 +1,9 @@
 import { renderHook } from '@testing-library/react-native';
 import { useHeadingAnimation } from '../useHeadingAnimation';
 
+// Mock react-native-reanimated with factory function to bypass Jest's auto-mocking
+jest.mock('react-native-reanimated', () => jest.requireActual('../../../__mocks__/react-native-reanimated'));
+
 describe('useHeadingAnimation', () => {
   it('should initialize with the correct heading value', () => {
     const { result } = renderHook(() => useHeadingAnimation(45));

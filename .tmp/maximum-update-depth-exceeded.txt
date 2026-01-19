@@ -1,0 +1,74 @@
+
+
+
+Claude
+January 16, 2026 at 09:42:36 PM
+The fix has been applied. Here's a summary of what was causing the issue and what was changed:
+Root Cause
+The HeadingDisplay component was using Animated.createAnimatedComponent(Text) with useAnimatedProps to animate the text property. However, React Native's Text component doesn't have an animatable text prop - it uses children for content.
+When you try to use useAnimatedProps with a property that doesn't exist as a native animated prop, Reanimated falls back to React's props system, which can trigger re-renders on every animation frame - causing the "Maximum update depth exceeded" error.
+Fix Applied
+src/components/HeadingDisplay.tsx:
+Changed from AnimatedText (animated Text) to AnimatedTextInput (animated TextInput)
+TextInput does have an animatable text prop
+Added editable={false} and styling to make it look like a Text component
+Used useDerivedValue to derive the formatted text string
+__mocks__/react-native-reanimated.js:
+Added useAnimatedProps and useDerivedValue mocks that were missing
+Improved the mock to properly handle animated props in tests
+Test in Demo App
+To verify the fix works:
+cd demo
+npm install
+npx expo start
+Then test on your device. The infinite loop error should no longer occur.
+
+
+Claude
+January 16, 2026 at 09:40:29 PM
+I found the issue. The HeadingDisplay component uses useAnimatedProps with a text property on an AnimatedText component, but React Native's Text component doesn't have a native text prop - it uses children. This causes Reanimated to fall back to React's props system, potentially triggering re-renders on every animation frame.
+Additionally, the mock doesn't include useAnimatedProps, so tests pass while the real app fails.
+Let me fix this by using TextInput with editable={false}, which properly supports animating text content via the value prop.
+
+Claude
+January 16, 2026 at 06:15:47 PM
+All tasks completed successfully. Here's a summary of the changes:
+Summary
+1. Fixed the Maximum Update Depth Error
+File: src/hooks/useHeadingAnimation.ts:39-40
+Removed animatedHeading from the useEffect dependency array. The useSharedValue hook returns a stable reference (like useRef), so including it in dependencies was causing potential re-render loops.
+// eslint-disable-next-line react-hooks/exhaustive-deps -- animatedHeading is a stable SharedValue ref
+}, [heading]);
+2. Created Test Infrastructure
+jest.config.js - Jest configuration with proper mocks for React Native
+babel.config.js - Babel configuration for TypeScript and React
+jest.setup.js - Test setup file
+3. Created Mocks
+__mocks__/react-native.js - Mock for React Native core components
+__mocks__/react-native-reanimated.js - Mock for Reanimated with SharedValue and animation functions
+__mocks__/expo-sensors.js - Mock for Magnetometer with test helpers
+__mocks__/react-native-svg.js - Mock for SVG components
+4. Created Tests
+src/hooks/__tests__/useHeadingAnimation.test.ts - 8 tests for the hook including:
+Initialization verification
+Handling heading changes without infinite loops
+0°/360° boundary crossing
+Maximum update depth prevention
+src/__tests__/Compass.test.tsx - 8 integration tests including:
+Render verification
+Error view for unavailable magnetometer
+Rapid heading update handling
+Boundary crossing without errors
+Bounded re-renders
+Verification
+✅ TypeScript typecheck passes
+✅ All 16 tests pass
+
+
+Claude
+January 16, 2026 at 06:10:34 PM
+I've identified the root cause and created a plan to fix it.
+Summary:
+The infinite loop is caused by animatedHeading being included in the useEffect dependency array in src/hooks/useHeadingAnimation.ts:39. While useSharedValue typically returns a stable reference, including it in dependencies is an anti-pattern that causes instability.
+The fix is simple: Remove animatedHeading from the dependency array (change [heading, animatedHeading] to [heading]).
+The plan also includes adding tests for the hook and component to prevent this from regressing, since the library currently has no test coverage.

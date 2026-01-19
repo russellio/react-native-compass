@@ -6,6 +6,9 @@ import { Magnetometer } from 'expo-sensors';
 // Mock expo-sensors with factory function to bypass Jest's auto-mocking
 jest.mock('expo-sensors', () => jest.requireActual('../../__mocks__/expo-sensors'));
 
+// Mock react-native-reanimated with factory function to bypass Jest's auto-mocking
+jest.mock('react-native-reanimated', () => jest.requireActual('../../__mocks__/react-native-reanimated'));
+
 // Mock react-native-svg
 jest.mock('react-native-svg', () => {
   const React = require('react');

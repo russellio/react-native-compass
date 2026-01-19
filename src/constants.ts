@@ -40,7 +40,7 @@ export const CARDINALS: Record<number, string> = {
 /**
  * Determines the tick type based on degree
  */
-function getTickType(degree: number): TickType {
+export function getTickType(degree: number): TickType {
   const normalizedDegree = ((degree % 360) + 360) % 360;
 
   // Cardinals are at 0°, 45°, 90°, 135°, 180°, 225°, 270°, 315°
@@ -64,7 +64,7 @@ function getTickType(degree: number): TickType {
 /**
  * Gets the label for a tick mark
  */
-function getTickLabel(degree: number, showNumericLabels: boolean = true): string | undefined {
+export function getTickLabel(degree: number, showNumericLabels: boolean = true): string | undefined {
   const normalizedDegree = ((degree % 360) + 360) % 360;
 
   // Always show cardinal directions

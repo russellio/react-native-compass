@@ -36,7 +36,7 @@ export function HeadingDisplay({
   });
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} testID="heading-display">
       <Text
         style={[
           styles.label,

@@ -5,7 +5,10 @@
       "Bash(yarn prepare)",
       "Bash(npx eslint:*)",
       "Bash(npx metro build:*)",
-      "Bash(npx jest --clearCache)"
+      "Bash(npx jest --clearCache)",
+      "Bash(git clone:*)",
+      "Bash(ln:*)",
+      "Bash(npx jest:*)"
     ]
   }
 }
