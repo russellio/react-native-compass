@@ -12,11 +12,13 @@ export function normalizeHeading(heading: number): number {
 /**
  * Calculates heading from magnetometer data
  * Uses atan2 to compute the angle from magnetic north
+ * Returns compass bearing: 0° = North, 90° = East, 180° = South, 270° = West
  */
 export function calculateHeading(data: MagnetometerData): number {
   // Calculate heading in radians, then convert to degrees
-  // Note: We use -y and x to get the correct orientation
-  const radians = Math.atan2(-data.y, data.x);
+  // Using atan2(x, -y) gives compass bearing where:
+  // - North (0, -1) → 0°, East (1, 0) → 90°, South (0, 1) → 180°, West (-1, 0) → 270°
+  const radians = Math.atan2(data.x, -data.y);
   let degrees = radians * (180 / Math.PI);
 
   // Normalize to 0-359 range
