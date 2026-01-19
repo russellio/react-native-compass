@@ -10,27 +10,28 @@ jest.mock('expo-sensors', () => jest.requireActual('../../__mocks__/expo-sensors
 jest.mock('react-native-reanimated', () => jest.requireActual('../../__mocks__/react-native-reanimated'));
 
 // Mock react-native-svg
-jest.mock('react-native-svg', () => {
-  const React = require('react');
-  const { View, Text } = require('react-native');
-  return {
-    Svg: ({ children, ...props }: any) =>
-      React.createElement(View, { testID: 'svg', ...props }, children),
-    G: ({ children, ...props }: any) =>
-      React.createElement(View, { testID: 'g', ...props }, children),
-    Line: (props: any) => React.createElement(View, { testID: 'line', ...props }),
-    Text: ({ children, ...props }: any) =>
-      React.createElement(Text, { testID: 'svg-text', ...props }, children),
-    Rect: (props: any) => React.createElement(View, { testID: 'rect', ...props }),
-    Path: (props: any) => React.createElement(View, { testID: 'path', ...props }),
-  };
-});
+jest.mock('react-native-svg', () => jest.requireActual('../../__mocks__/react-native-svg'));
 
 // Import test helpers from the mock module
 const { __magnetometerTestHelpers } = require('expo-sensors');
 
-// Get the mocked Magnetometer
-const mockedMagnetometer = Magnetometer as jest.Mocked<typeof Magnetometer>;
+// Helper to wait for compass to be fully initialized
+const waitForCompassReady = async (getByTestId: (id: string) => any) => {
+  // Wait for the magnetometer to be initialized and compass to render
+  await waitFor(() => {
+    expect(Magnetometer.addListener).toHaveBeenCalled();
+  });
+
+  // Small delay to ensure React state updates have propagated
+  await act(async () => {
+    await new Promise(resolve => setTimeout(resolve, 10));
+  });
+
+  // Verify compass container is rendered (not error view)
+  await waitFor(() => {
+    expect(getByTestId('compass-container')).toBeTruthy();
+  });
+};
 
 describe('Compass', () => {
   beforeEach(() => {
@@ -48,20 +49,30 @@ describe('Compass', () => {
   it('renders error view when magnetometer is unavailable', async () => {
     __magnetometerTestHelpers.setAvailable(false);
 
-    const { findByText } = render(<Compass />);
+    const { toJSON } = render(<Compass />);
 
-    const errorMessage = await findByText(/magnetometer sensor is not available/i);
-    expect(errorMessage).toBeTruthy();
+    // Wait for the async check to complete
+    await waitFor(() => {
+      expect(Magnetometer.isAvailableAsync).toHaveBeenCalled();
+    });
+
+    // Allow state updates to propagate
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 10));
+    });
+
+    // Check that error view is rendered with the error message
+    const tree = JSON.stringify(toJSON());
+    expect(tree).toContain('Compass Unavailable');
+    expect(tree).toContain('Magnetometer sensor is not available');
   });
 
   it('does not exceed maximum update depth with rapid heading updates', async () => {
     const onHeadingChange = jest.fn();
 
-    render(<Compass onHeadingChange={onHeadingChange} />);
+    const { getByTestId } = render(<Compass onHeadingChange={onHeadingChange} />);
 
-    await waitFor(() => {
-      expect(Magnetometer.addListener).toHaveBeenCalled();
-    });
+    await waitForCompassReady(getByTestId);
 
     // Simulate 100 rapid magnetometer readings
     await act(async () => {
@@ -82,11 +93,9 @@ describe('Compass', () => {
   it('handles 0/360 degree boundary crossing without issues', async () => {
     const onHeadingChange = jest.fn();
 
-    render(<Compass onHeadingChange={onHeadingChange} />);
+    const { getByTestId } = render(<Compass onHeadingChange={onHeadingChange} />);
 
-    await waitFor(() => {
-      expect(Magnetometer.addListener).toHaveBeenCalled();
-    });
+    await waitForCompassReady(getByTestId);
 
     // Simulate crossing 0/360 boundary multiple times
     await act(async () => {
@@ -107,17 +116,15 @@ describe('Compass', () => {
     });
 
     // Component should handle boundary crossing without errors
-    expect(true).toBe(true);
+    expect(onHeadingChange).toHaveBeenCalled();
   });
 
   it('handles magnetometer readings without errors', async () => {
     const onHeadingChange = jest.fn();
 
-    render(<Compass onHeadingChange={onHeadingChange} />);
+    const { getByTestId } = render(<Compass onHeadingChange={onHeadingChange} />);
 
-    await waitFor(() => {
-      expect(Magnetometer.addListener).toHaveBeenCalled();
-    });
+    await waitForCompassReady(getByTestId);
 
     // The magnetometer listener is registered, simulating readings should not throw
     await act(async () => {
@@ -126,8 +133,7 @@ describe('Compass', () => {
     });
 
     // Test passes if we get here without errors
-    // The callback behavior is tested through the mock's listener registration
-    expect(Magnetometer.addListener).toHaveBeenCalled();
+    expect(onHeadingChange).toHaveBeenCalled();
   });
 
   it('maintains bounded re-renders under continuous updates', async () => {
@@ -138,11 +144,9 @@ describe('Compass', () => {
       return <Compass />;
     };
 
-    render(<TestComponent />);
+    const { getByTestId } = render(<TestComponent />);
 
-    await waitFor(() => {
-      expect(Magnetometer.addListener).toHaveBeenCalled();
-    });
+    await waitForCompassReady(getByTestId);
 
     const initialRenderCount = renderCount;
 
@@ -172,11 +176,9 @@ describe('Compass', () => {
 
     // Wrap in try-catch to detect Maximum update depth error
     try {
-      render(<Compass onHeadingChange={onHeadingChange} />);
+      const { getByTestId } = render(<Compass onHeadingChange={onHeadingChange} />);
 
-      await waitFor(() => {
-        expect(Magnetometer.addListener).toHaveBeenCalled();
-      });
+      await waitForCompassReady(getByTestId);
 
       // Simulate 100 rapid readings (simulating ~1.7 seconds at 60Hz)
       await act(async () => {
@@ -220,17 +222,18 @@ describe('Compass', () => {
   });
 
   it('cleans up magnetometer subscription on unmount', async () => {
-    const { unmount } = render(<Compass />);
+    const { unmount, getByTestId } = render(<Compass />);
 
-    await waitFor(() => {
-      expect(Magnetometer.addListener).toHaveBeenCalled();
-    });
+    await waitForCompassReady(getByTestId);
+
+    const listenersBeforeUnmount = __magnetometerTestHelpers.getListenersCount();
+    expect(listenersBeforeUnmount).toBe(1);
 
     unmount();
 
-    // The remove function should be callable (cleanup occurred)
-    // In our mock, this is tracked internally
-    expect(true).toBe(true);
+    // The subscription should be removed
+    const listenersAfterUnmount = __magnetometerTestHelpers.getListenersCount();
+    expect(listenersAfterUnmount).toBe(0);
   });
 
   it('renders without fontFamily prop (uses system default)', async () => {
@@ -263,11 +266,9 @@ describe('Compass', () => {
       headings.push(heading);
     };
 
-    render(<Compass onHeadingChange={onHeadingChange} />);
+    const { getByTestId } = render(<Compass onHeadingChange={onHeadingChange} />);
 
-    await waitFor(() => {
-      expect(Magnetometer.addListener).toHaveBeenCalled();
-    });
+    await waitForCompassReady(getByTestId);
 
     // Simulate readings for various directions
     await act(async () => {
@@ -291,11 +292,9 @@ describe('Compass', () => {
   it('calls onAccuracyChange callback', async () => {
     const onAccuracyChange = jest.fn();
 
-    render(<Compass onAccuracyChange={onAccuracyChange} />);
+    const { getByTestId } = render(<Compass onAccuracyChange={onAccuracyChange} />);
 
-    await waitFor(() => {
-      expect(Magnetometer.addListener).toHaveBeenCalled();
-    });
+    await waitForCompassReady(getByTestId);
 
     await act(async () => {
       __magnetometerTestHelpers.simulateReading({ x: 0, y: -1, z: 0 });

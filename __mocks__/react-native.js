@@ -19,10 +19,12 @@ const flattenStyleLocal = (style) => {
 
 // Create simple functional components that mimic RN components
 // Using 'div' as base element since test-renderer handles it natively
+// Include both testID (for RNTL) and data-testid (for DOM queries)
 const View = React.forwardRef(function View({ children, style, testID, ...props }, ref) {
   return React.createElement('div', {
     ref,
     style: flattenStyleLocal(style),
+    testID,
     'data-testid': testID,
     ...props
   }, children);
@@ -33,6 +35,7 @@ const Text = React.forwardRef(function Text({ children, style, testID, ...props 
   return React.createElement('span', {
     ref,
     style: flattenStyleLocal(style),
+    testID,
     'data-testid': testID,
     ...props
   }, children);
@@ -43,6 +46,7 @@ const TextInput = React.forwardRef(function TextInput({ style, testID, value, de
   return React.createElement('input', {
     ref,
     style: flattenStyleLocal(style),
+    testID,
     'data-testid': testID,
     value: value || text || defaultValue || '',
     readOnly: true,
@@ -55,6 +59,7 @@ const Image = React.forwardRef(function Image({ style, testID, source, ...props 
   return React.createElement('img', {
     ref,
     style: flattenStyleLocal(style),
+    testID,
     'data-testid': testID,
     src: source?.uri || '',
     ...props
@@ -66,6 +71,7 @@ const ScrollView = React.forwardRef(function ScrollView({ children, style, testI
   return React.createElement('div', {
     ref,
     style: flattenStyleLocal(style),
+    testID,
     'data-testid': testID,
     ...props
   }, children);

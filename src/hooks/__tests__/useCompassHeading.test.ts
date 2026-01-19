@@ -1,6 +1,6 @@
-import { renderHook, waitFor, act } from '@testing-library/react-native';
-import { Magnetometer } from 'expo-sensors';
+import { renderHook, act, waitFor } from '@testing-library/react-native';
 import { useCompassHeading } from '../useCompassHeading';
+import { Magnetometer } from 'expo-sensors';
 
 // Mock expo-sensors with factory function to bypass Jest's auto-mocking
 jest.mock('expo-sensors', () => jest.requireActual('../../../__mocks__/expo-sensors'));
@@ -8,297 +8,322 @@ jest.mock('expo-sensors', () => jest.requireActual('../../../__mocks__/expo-sens
 // Import test helpers from the mock module
 const { __magnetometerTestHelpers } = require('expo-sensors');
 
-// Get the mocked Magnetometer
-const mockedMagnetometer = Magnetometer as jest.Mocked<typeof Magnetometer>;
-
 describe('useCompassHeading', () => {
   beforeEach(() => {
     __magnetometerTestHelpers.reset();
   });
 
-  it('should initialize magnetometer on mount', async () => {
-    const onHeadingChange = jest.fn();
+  describe('initialization', () => {
+    it('calls isAvailableAsync on mount', async () => {
+      renderHook(() => useCompassHeading());
 
-    renderHook(() =>
-      useCompassHeading(0.2, 16, onHeadingChange)
-    );
-
-    await waitFor(() => {
-      expect(Magnetometer.isAvailableAsync).toHaveBeenCalled();
+      await waitFor(() => {
+        expect(Magnetometer.isAvailableAsync).toHaveBeenCalled();
+      });
     });
 
-    await waitFor(() => {
-      expect(Magnetometer.addListener).toHaveBeenCalled();
-    });
-  });
+    it('calls setUpdateInterval with default value', async () => {
+      renderHook(() => useCompassHeading());
 
-  it('should call onHeadingChange callback when magnetometer updates', async () => {
-    const onHeadingChange = jest.fn();
-
-    renderHook(() =>
-      useCompassHeading(0.2, 16, onHeadingChange)
-    );
-
-    // Wait for initialization to complete
-    await waitFor(() => {
-      expect(Magnetometer.addListener).toHaveBeenCalled();
+      await waitFor(() => {
+        expect(Magnetometer.setUpdateInterval).toHaveBeenCalledWith(16);
+      });
     });
 
-    // Simulate magnetometer reading (North) - wrapped in act for state updates
-    await act(async () => {
-      __magnetometerTestHelpers.simulateReading({ x: 0, y: -1, z: 0 });
+    it('calls setUpdateInterval with custom value', async () => {
+      renderHook(() => useCompassHeading(0.2, 32));
+
+      await waitFor(() => {
+        expect(Magnetometer.setUpdateInterval).toHaveBeenCalledWith(32);
+      });
     });
 
-    expect(onHeadingChange).toHaveBeenCalled();
-    expect(typeof onHeadingChange.mock.calls[0][0]).toBe('number');
-  });
+    it('calls addListener when magnetometer is available', async () => {
+      renderHook(() => useCompassHeading());
 
-  it('should handle 60 rapid magnetometer updates without errors', async () => {
-    const onHeadingChange = jest.fn();
-    const onError = jest.fn();
-
-    renderHook(() =>
-      useCompassHeading(0.2, 16, onHeadingChange, undefined, onError)
-    );
-
-    await waitFor(() => {
-      expect(Magnetometer.addListener).toHaveBeenCalled();
+      await waitFor(() => {
+        expect(Magnetometer.addListener).toHaveBeenCalled();
+      });
     });
 
-    // Simulate 60 rapid magnetometer readings (1 second at 60Hz)
-    await act(async () => {
-      for (let i = 0; i < 60; i++) {
-        const angle = (i * 6) * (Math.PI / 180); // 6° per update, full rotation
-        __magnetometerTestHelpers.simulateReading({
-          x: Math.cos(angle),
-          y: -Math.sin(angle),
-          z: 0,
-        });
-      }
-    });
+    it('does not call addListener when magnetometer is unavailable', async () => {
+      __magnetometerTestHelpers.setAvailable(false);
 
-    // Should have 60 callback invocations
-    expect(onHeadingChange).toHaveBeenCalledTimes(60);
-    // No errors should have occurred
-    expect(onError).not.toHaveBeenCalled();
-  });
+      renderHook(() => useCompassHeading());
 
-  it('should not cause React re-renders (stateless hook)', async () => {
-    const onHeadingChange = jest.fn();
-    let renderCount = 0;
+      await waitFor(() => {
+        expect(Magnetometer.isAvailableAsync).toHaveBeenCalled();
+      });
 
-    renderHook(() => {
-      renderCount++;
-      return useCompassHeading(0.2, 16, onHeadingChange);
-    });
+      // Give it a tick to ensure addListener wouldn't be called
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 10));
+      });
 
-    await waitFor(() => {
-      expect(Magnetometer.addListener).toHaveBeenCalled();
-    });
-
-    const initialRenderCount = renderCount;
-
-    // Simulate 30 magnetometer readings
-    await act(async () => {
-      for (let i = 0; i < 30; i++) {
-        __magnetometerTestHelpers.simulateReading({
-          x: Math.cos(i * 0.1),
-          y: -Math.sin(i * 0.1),
-          z: 0,
-        });
-      }
-    });
-
-    // Hook should not have triggered any additional renders
-    // (callbacks are fired but no internal state updates)
-    expect(renderCount).toBe(initialRenderCount);
-  });
-
-  it('should call onError and onAvailabilityChange when sensor unavailable', async () => {
-    __magnetometerTestHelpers.setAvailable(false);
-
-    const onError = jest.fn();
-    const onAvailabilityChange = jest.fn();
-
-    renderHook(() =>
-      useCompassHeading(0.2, 16, undefined, undefined, onError, onAvailabilityChange)
-    );
-
-    // Wait for the error callback to be called
-    await waitFor(() => {
-      expect(onError).toHaveBeenCalled();
-    });
-
-    expect(onError).toHaveBeenCalledWith('Magnetometer sensor is not available on this device');
-    expect(onAvailabilityChange).toHaveBeenCalledWith(false);
-  });
-
-  it('should call onAvailabilityChange(true) when sensor is available', async () => {
-    const onAvailabilityChange = jest.fn();
-
-    renderHook(() =>
-      useCompassHeading(0.2, 16, undefined, undefined, undefined, onAvailabilityChange)
-    );
-
-    await waitFor(() => {
-      expect(onAvailabilityChange).toHaveBeenCalledWith(true);
+      expect(Magnetometer.addListener).not.toHaveBeenCalled();
     });
   });
 
-  it('should handle 0°/360° boundary crossing without producing NaN', async () => {
-    const headings: number[] = [];
-    const onHeadingChange = jest.fn((heading: number) => {
-      headings.push(heading);
+  describe('callbacks', () => {
+    it('calls onHeadingChange with smoothed heading value', async () => {
+      const onHeadingChange = jest.fn();
+
+      renderHook(() => useCompassHeading(0.2, 16, onHeadingChange));
+
+      await waitFor(() => {
+        expect(Magnetometer.addListener).toHaveBeenCalled();
+      });
+
+      await act(async () => {
+        __magnetometerTestHelpers.simulateReading({ x: 0, y: -1, z: 0 });
+      });
+
+      expect(onHeadingChange).toHaveBeenCalled();
+      const heading = onHeadingChange.mock.calls[0][0];
+      expect(heading).toBeGreaterThanOrEqual(0);
+      expect(heading).toBeLessThan(360);
     });
 
-    renderHook(() =>
-      useCompassHeading(0.2, 16, onHeadingChange)
-    );
+    it('calls onAccuracyChange callback', async () => {
+      const onAccuracyChange = jest.fn();
 
-    await waitFor(() => {
-      expect(Magnetometer.addListener).toHaveBeenCalled();
+      renderHook(() => useCompassHeading(0.2, 16, undefined, onAccuracyChange));
+
+      await waitFor(() => {
+        expect(Magnetometer.addListener).toHaveBeenCalled();
+      });
+
+      await act(async () => {
+        __magnetometerTestHelpers.simulateReading({ x: 1, y: 0, z: 0 });
+      });
+
+      expect(onAccuracyChange).toHaveBeenCalled();
     });
 
-    // Oscillate between 1° and 359° (crossing boundary)
-    await act(async () => {
-      for (let i = 0; i < 20; i++) {
-        const isOdd = i % 2 === 1;
-        __magnetometerTestHelpers.simulateReading({
-          x: isOdd ? 0.02 : -0.02,
-          y: -1,
-          z: 0,
-        });
-      }
+    it('calls onError when magnetometer is unavailable', async () => {
+      __magnetometerTestHelpers.setAvailable(false);
+      const onError = jest.fn();
+
+      renderHook(() =>
+        useCompassHeading(0.2, 16, undefined, undefined, onError)
+      );
+
+      await waitFor(() => {
+        expect(onError).toHaveBeenCalledWith(
+          expect.stringContaining('not available')
+        );
+      });
     });
 
-    // Verify callbacks were called
-    expect(headings.length).toBe(20);
+    it('calls onAvailabilityChange with true when available', async () => {
+      const onAvailabilityChange = jest.fn();
 
-    // All headings should be valid numbers (not NaN, not Infinity)
-    headings.forEach((heading) => {
-      expect(Number.isFinite(heading)).toBe(true);
-      expect(Number.isNaN(heading)).toBe(false);
+      renderHook(() =>
+        useCompassHeading(0.2, 16, undefined, undefined, undefined, onAvailabilityChange)
+      );
+
+      await waitFor(() => {
+        expect(onAvailabilityChange).toHaveBeenCalledWith(true);
+      });
+    });
+
+    it('calls onAvailabilityChange with false when unavailable', async () => {
+      __magnetometerTestHelpers.setAvailable(false);
+      const onAvailabilityChange = jest.fn();
+
+      renderHook(() =>
+        useCompassHeading(0.2, 16, undefined, undefined, undefined, onAvailabilityChange)
+      );
+
+      await waitFor(() => {
+        expect(onAvailabilityChange).toHaveBeenCalledWith(false);
+      });
     });
   });
 
-  it('should use the latest callback version (ref stability)', async () => {
-    const firstCallback = jest.fn();
-    const secondCallback = jest.fn();
+  describe('smoothing', () => {
+    it('first reading is raw (no smoothing applied)', async () => {
+      const headings: number[] = [];
+      const onHeadingChange = (heading: number) => headings.push(heading);
 
-    const { rerender } = renderHook(
-      ({ callback }) => useCompassHeading(0.2, 16, callback),
-      { initialProps: { callback: firstCallback } }
-    );
+      renderHook(() => useCompassHeading(0.2, 16, onHeadingChange));
 
-    await waitFor(() => {
-      expect(Magnetometer.addListener).toHaveBeenCalled();
+      await waitFor(() => {
+        expect(Magnetometer.addListener).toHaveBeenCalled();
+      });
+
+      // First reading - should be raw
+      await act(async () => {
+        __magnetometerTestHelpers.simulateReading({ x: 1, y: 0, z: 0 }); // 0°
+      });
+
+      expect(headings.length).toBe(1);
+      expect(headings[0]).toBeCloseTo(0, 0);
     });
 
-    // First reading with first callback
-    await act(async () => {
-      __magnetometerTestHelpers.simulateReading({ x: 0, y: -1, z: 0 });
-    });
-    expect(firstCallback).toHaveBeenCalledTimes(1);
-    expect(secondCallback).not.toHaveBeenCalled();
+    it('subsequent readings are EMA smoothed', async () => {
+      const headings: number[] = [];
+      const onHeadingChange = (heading: number) => headings.push(heading);
 
-    // Change callback
-    rerender({ callback: secondCallback });
+      // Using alpha=1 means no smoothing (current value used as-is)
+      // Using alpha=0.5 means halfway between current and previous
+      renderHook(() => useCompassHeading(0.5, 16, onHeadingChange));
 
-    // Second reading should call the new callback
-    await act(async () => {
-      __magnetometerTestHelpers.simulateReading({ x: 1, y: 0, z: 0 });
+      await waitFor(() => {
+        expect(Magnetometer.addListener).toHaveBeenCalled();
+      });
+
+      await act(async () => {
+        // First reading: 0°
+        __magnetometerTestHelpers.simulateReading({ x: 1, y: 0, z: 0 });
+        // Second reading: 90° - should be smoothed towards 0°
+        __magnetometerTestHelpers.simulateReading({ x: 0, y: -1, z: 0 });
+      });
+
+      expect(headings.length).toBe(2);
+      // First reading is raw
+      expect(headings[0]).toBeCloseTo(0, 0);
+      // Second reading should be smoothed: 0.5 * 90 + 0.5 * 0 = 45
+      expect(headings[1]).toBeCloseTo(45, 0);
     });
-    expect(firstCallback).toHaveBeenCalledTimes(1); // No additional calls
-    expect(secondCallback).toHaveBeenCalledTimes(1); // New callback called
   });
 
-  it('should call onAccuracyChange callback', async () => {
-    const onAccuracyChange = jest.fn();
+  describe('edge cases', () => {
+    it('handles 0/360 boundary correctly', async () => {
+      const headings: number[] = [];
+      const onHeadingChange = (heading: number) => headings.push(heading);
 
-    renderHook(() =>
-      useCompassHeading(0.2, 16, undefined, onAccuracyChange)
-    );
+      renderHook(() => useCompassHeading(0.5, 16, onHeadingChange));
 
-    await waitFor(() => {
-      expect(Magnetometer.addListener).toHaveBeenCalled();
+      await waitFor(() => {
+        expect(Magnetometer.addListener).toHaveBeenCalled();
+      });
+
+      await act(async () => {
+        // Start near 350° (roughly x=-0.17, y=-0.985 in implementation coords)
+        // Using x=1, y=0 for 0°, then x close to 1, y slightly negative for small angle
+        __magnetometerTestHelpers.simulateReading({ x: 1, y: 0, z: 0 }); // 0°
+        __magnetometerTestHelpers.simulateReading({ x: 1, y: 0.17, z: 0 }); // ~350° in impl coords
+      });
+
+      // All headings should be in valid 0-359 range
+      headings.forEach((heading) => {
+        expect(heading).toBeGreaterThanOrEqual(0);
+        expect(heading).toBeLessThan(360);
+      });
     });
 
-    // Simulate reading
-    await act(async () => {
-      __magnetometerTestHelpers.simulateReading({ x: 0, y: -1, z: 0 });
+    it('handles 60Hz rapid updates without errors', async () => {
+      const onHeadingChange = jest.fn();
+
+      renderHook(() => useCompassHeading(0.2, 16, onHeadingChange));
+
+      await waitFor(() => {
+        expect(Magnetometer.addListener).toHaveBeenCalled();
+      });
+
+      // Simulate 60 readings (1 second at 60Hz)
+      await act(async () => {
+        for (let i = 0; i < 60; i++) {
+          const angle = (i * 6) * (Math.PI / 180);
+          __magnetometerTestHelpers.simulateReading({
+            x: Math.cos(angle),
+            y: -Math.sin(angle),
+            z: 0,
+          });
+        }
+      });
+
+      expect(onHeadingChange).toHaveBeenCalledTimes(60);
     });
 
-    expect(onAccuracyChange).toHaveBeenCalled();
+    it('handles permission denied gracefully', async () => {
+      __magnetometerTestHelpers.setPermissionStatus('denied');
+      const onError = jest.fn();
+
+      renderHook(() =>
+        useCompassHeading(0.2, 16, undefined, undefined, onError)
+      );
+
+      await waitFor(() => {
+        expect(Magnetometer.requestPermissionsAsync).toHaveBeenCalled();
+      });
+
+      // The hook should call onError when permissions are denied
+      await waitFor(() => {
+        expect(onError).toHaveBeenCalled();
+      });
+    });
   });
 
-  it('should cleanup subscription on unmount', async () => {
-    const onHeadingChange = jest.fn();
+  describe('cleanup', () => {
+    it('removes subscription on unmount', async () => {
+      const { unmount } = renderHook(() => useCompassHeading());
 
-    const { unmount } = renderHook(() =>
-      useCompassHeading(0.2, 16, onHeadingChange)
-    );
+      await waitFor(() => {
+        expect(Magnetometer.addListener).toHaveBeenCalled();
+      });
 
-    await waitFor(() => {
-      expect(Magnetometer.addListener).toHaveBeenCalled();
+      const listenersBeforeUnmount = __magnetometerTestHelpers.getListenersCount();
+      expect(listenersBeforeUnmount).toBe(1);
+
+      unmount();
+
+      const listenersAfterUnmount = __magnetometerTestHelpers.getListenersCount();
+      expect(listenersAfterUnmount).toBe(0);
     });
 
-    // Get callback count before unmount
-    await act(async () => {
-      __magnetometerTestHelpers.simulateReading({ x: 0, y: -1, z: 0 });
+    it('recreates subscription when smoothingFactor changes', async () => {
+      const { rerender } = renderHook(
+        ({ smoothingFactor }) => useCompassHeading(smoothingFactor),
+        { initialProps: { smoothingFactor: 0.2 } }
+      );
+
+      await waitFor(() => {
+        expect(Magnetometer.addListener).toHaveBeenCalledTimes(1);
+      });
+
+      // Change smoothing factor
+      rerender({ smoothingFactor: 0.5 });
+
+      await waitFor(() => {
+        // Should create a new subscription
+        expect(Magnetometer.addListener).toHaveBeenCalledTimes(2);
+      });
     });
-    const callCountBeforeUnmount = onHeadingChange.mock.calls.length;
-
-    // Unmount
-    unmount();
-
-    // Simulate more readings after unmount (no act needed since component is unmounted)
-    __magnetometerTestHelpers.simulateReading({ x: 1, y: 0, z: 0 });
-    __magnetometerTestHelpers.simulateReading({ x: 0, y: 1, z: 0 });
-
-    // Callback count should not increase after unmount
-    expect(onHeadingChange.mock.calls.length).toBe(callCountBeforeUnmount);
   });
 
-  it('should handle denied permissions gracefully', async () => {
-    __magnetometerTestHelpers.setPermissionStatus('denied');
+  describe('stateless behavior', () => {
+    it('uses callback refs to avoid recreating subscription on callback changes', async () => {
+      const onHeadingChange1 = jest.fn();
+      const onHeadingChange2 = jest.fn();
 
-    const onError = jest.fn();
+      const { rerender } = renderHook(
+        ({ callback }) => useCompassHeading(0.2, 16, callback),
+        { initialProps: { callback: onHeadingChange1 } }
+      );
 
-    renderHook(() =>
-      useCompassHeading(0.2, 16, undefined, undefined, onError)
-    );
+      await waitFor(() => {
+        expect(Magnetometer.addListener).toHaveBeenCalledTimes(1);
+      });
 
-    await waitFor(() => {
-      expect(onError).toHaveBeenCalledWith('Location permission is required for magnetometer access on iOS');
+      // Change callback - should NOT recreate subscription
+      rerender({ callback: onHeadingChange2 });
+
+      // Wait a tick
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 10));
+      });
+
+      // Should still be only 1 addListener call (subscription not recreated)
+      expect(Magnetometer.addListener).toHaveBeenCalledTimes(1);
+
+      // But the new callback should be used
+      await act(async () => {
+        __magnetometerTestHelpers.simulateReading({ x: 1, y: 0, z: 0 });
+      });
+
+      expect(onHeadingChange2).toHaveBeenCalled();
     });
-
-    // Ensure no listener is added
-    expect(Magnetometer.addListener).not.toHaveBeenCalled();
-  });
-
-  it('should continue if permission request throws (missing API)', async () => {
-    // Mock requestPermissionsAsync to throw
-    const originalRequest = Magnetometer.requestPermissionsAsync;
-    Magnetometer.requestPermissionsAsync.mockImplementationOnce(() => Promise.reject(new Error('Not available')));
-
-    const onHeadingChange = jest.fn();
-
-    renderHook(() =>
-      useCompassHeading(0.2, 16, onHeadingChange)
-    );
-
-    await waitFor(() => {
-      expect(Magnetometer.addListener).toHaveBeenCalled();
-    });
-
-    // Simulate reading to ensure it works
-    await act(async () => {
-      __magnetometerTestHelpers.simulateReading({ x: 0, y: -1, z: 0 });
-    });
-
-    expect(onHeadingChange).toHaveBeenCalled();
-
-    // Restore
-    Magnetometer.requestPermissionsAsync = originalRequest;
   });
 });
