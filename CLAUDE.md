@@ -83,3 +83,21 @@ Compass component → CompassTape, HeadingDisplay, CompassNeedle
 ### Build System
 
 Uses `react-native-builder-bob` to build CommonJS, ESM, and TypeScript declaration files. Source is in `src/`, output goes to `lib/`.
+
+## Compass Heading Calibration
+
+**IMPORTANT**: If working on heading accuracy issues (compass showing wrong direction compared to native iOS compass), read `COMPASS_HEADING_CALIBRATION.md` first. It contains:
+
+- The correct `calculateHeading()` formula and why it works
+- How to interpret comparison screenshots (native vs RN demo)
+- Common wrong formulas and their symptoms (90° off, 180° off, etc.)
+- Step-by-step debugging workflow
+- Test vector conventions for compass bearing
+
+**Key file**: `src/utils/headingMath.ts:17-27` - the `calculateHeading()` function
+
+**Current correct formula**: `atan2(-data.y, data.x)` for iOS magnetometer where X points North:
+- North (x=1, y=0) → 0°
+- East (x=0, y=-1) → 90°
+- South (x=-1, y=0) → 180°
+- West (x=0, y=1) → 270°

@@ -9,6 +9,7 @@ Thumbs.db
 .vscode/
 *.log
 .claude/
+CLAUDE.md
 
 # ----------------------------------------
 # Node / Package managers
@@ -71,3 +72,4 @@ coverage/
 tmp/
 temp/
 .cache/
+.docs/

@@ -75,7 +75,8 @@ describe('useCompassHeading', () => {
       });
 
       await act(async () => {
-        __magnetometerTestHelpers.simulateReading({ x: 0, y: -1, z: 0 });
+        // iOS magnetometer: x=1, y=0 = North (0°)
+        __magnetometerTestHelpers.simulateReading({ x: 1, y: 0, z: 0 });
       });
 
       expect(onHeadingChange).toHaveBeenCalled();
@@ -94,7 +95,8 @@ describe('useCompassHeading', () => {
       });
 
       await act(async () => {
-        __magnetometerTestHelpers.simulateReading({ x: 1, y: 0, z: 0 });
+        // iOS magnetometer: x=0, y=-1 = East (90°)
+        __magnetometerTestHelpers.simulateReading({ x: 0, y: -1, z: 0 });
       });
 
       expect(onAccuracyChange).toHaveBeenCalled();
@@ -152,9 +154,10 @@ describe('useCompassHeading', () => {
         expect(Magnetometer.addListener).toHaveBeenCalled();
       });
 
-      // First reading - should be raw
+      // First reading - should be raw (North = 0°)
+      // iOS magnetometer: x=1, y=0 = North
       await act(async () => {
-        __magnetometerTestHelpers.simulateReading({ x: 1, y: 0, z: 0 }); // 0°
+        __magnetometerTestHelpers.simulateReading({ x: 1, y: 0, z: 0 }); // 0° North
       });
 
       expect(headings.length).toBe(1);
@@ -173,10 +176,11 @@ describe('useCompassHeading', () => {
         expect(Magnetometer.addListener).toHaveBeenCalled();
       });
 
+      // iOS magnetometer: x=1, y=0 = North (0°), x=0, y=-1 = East (90°)
       await act(async () => {
-        // First reading: 0°
+        // First reading: 0° (North)
         __magnetometerTestHelpers.simulateReading({ x: 1, y: 0, z: 0 });
-        // Second reading: 90° - should be smoothed towards 0°
+        // Second reading: 90° (East) - should be smoothed towards 0°
         __magnetometerTestHelpers.simulateReading({ x: 0, y: -1, z: 0 });
       });
 
@@ -200,10 +204,12 @@ describe('useCompassHeading', () => {
       });
 
       await act(async () => {
-        // Start near 350° (roughly x=-0.17, y=-0.985 in implementation coords)
-        // Using x=1, y=0 for 0°, then x close to 1, y slightly negative for small angle
-        __magnetometerTestHelpers.simulateReading({ x: 1, y: 0, z: 0 }); // 0°
-        __magnetometerTestHelpers.simulateReading({ x: 1, y: 0.17, z: 0 }); // ~350° in impl coords
+        // Start at 0° (North), then move to ~350° (just west of North)
+        // iOS magnetometer convention: x = cos(angle), y = -sin(angle)
+        // 0° North: x=1, y=0
+        // 350° (10° west of North): x=cos(-10°)≈0.985, y=-sin(-10°)≈0.17
+        __magnetometerTestHelpers.simulateReading({ x: 1, y: 0, z: 0 }); // 0° North
+        __magnetometerTestHelpers.simulateReading({ x: 0.985, y: 0.17, z: 0 }); // ~350°
       });
 
       // All headings should be in valid 0-359 range
@@ -223,12 +229,13 @@ describe('useCompassHeading', () => {
       });
 
       // Simulate 60 readings (1 second at 60Hz)
+      // iOS magnetometer convention: x = cos(heading), y = -sin(heading)
       await act(async () => {
         for (let i = 0; i < 60; i++) {
-          const angle = (i * 6) * (Math.PI / 180);
+          const heading = (i * 6) * (Math.PI / 180); // 0° to 354° in 6° increments
           __magnetometerTestHelpers.simulateReading({
-            x: Math.cos(angle),
-            y: -Math.sin(angle),
+            x: Math.cos(heading),
+            y: -Math.sin(heading),
             z: 0,
           });
         }
@@ -319,6 +326,7 @@ describe('useCompassHeading', () => {
       expect(Magnetometer.addListener).toHaveBeenCalledTimes(1);
 
       // But the new callback should be used
+      // iOS magnetometer: x=1, y=0 = North (0°)
       await act(async () => {
         __magnetometerTestHelpers.simulateReading({ x: 1, y: 0, z: 0 });
       });
