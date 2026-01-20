@@ -43,29 +43,30 @@ describe('headingMath', () => {
   });
 
   describe('calculateHeading', () => {
-    // The implementation uses atan2(x, -y) which produces compass convention:
-    // - North (y negative) = 0°
-    // - East (x positive) = 90°
-    // - South (y positive) = 180°
-    // - West (x negative) = 270°
+    // iOS magnetometer coordinate system: X points toward magnetic North
+    // The implementation uses atan2(-y, x) which produces compass convention:
+    // - North (x positive, y=0) = 0°
+    // - East (x=0, y negative) = 90°
+    // - South (x negative, y=0) = 180°
+    // - West (x=0, y positive) = 270°
 
-    it('returns 0 for magnetic north vector (x=0, y=-1)', () => {
-      const heading = calculateHeading({ x: 0, y: -1, z: 0 });
+    it('returns 0 for magnetic north vector (x=1, y=0)', () => {
+      const heading = calculateHeading({ x: 1, y: 0, z: 0 });
       expect(heading).toBeCloseTo(0, 0);
     });
 
-    it('returns 90 for magnetic east vector (x=1, y=0)', () => {
-      const heading = calculateHeading({ x: 1, y: 0, z: 0 });
+    it('returns 90 for magnetic east vector (x=0, y=-1)', () => {
+      const heading = calculateHeading({ x: 0, y: -1, z: 0 });
       expect(heading).toBeCloseTo(90, 0);
     });
 
-    it('returns 180 for magnetic south vector (x=0, y=1)', () => {
-      const heading = calculateHeading({ x: 0, y: 1, z: 0 });
+    it('returns 180 for magnetic south vector (x=-1, y=0)', () => {
+      const heading = calculateHeading({ x: -1, y: 0, z: 0 });
       expect(heading).toBeCloseTo(180, 0);
     });
 
-    it('returns 270 for magnetic west vector (x=-1, y=0)', () => {
-      const heading = calculateHeading({ x: -1, y: 0, z: 0 });
+    it('returns 270 for magnetic west vector (x=0, y=1)', () => {
+      const heading = calculateHeading({ x: 0, y: 1, z: 0 });
       expect(heading).toBeCloseTo(270, 0);
     });
 
@@ -74,8 +75,8 @@ describe('headingMath', () => {
       expect(heading).toBeCloseTo(45, 0);
     });
 
-    it('returns 135 for SE diagonal (x=1, y=1)', () => {
-      const heading = calculateHeading({ x: 1, y: 1, z: 0 });
+    it('returns 135 for SE diagonal (x=-1, y=-1)', () => {
+      const heading = calculateHeading({ x: -1, y: -1, z: 0 });
       expect(heading).toBeCloseTo(135, 0);
     });
 
@@ -84,8 +85,8 @@ describe('headingMath', () => {
       expect(heading).toBeCloseTo(225, 0);
     });
 
-    it('returns 315 for NW diagonal (x=-1, y=-1)', () => {
-      const heading = calculateHeading({ x: -1, y: -1, z: 0 });
+    it('returns 315 for NW diagonal (x=1, y=1)', () => {
+      const heading = calculateHeading({ x: 1, y: 1, z: 0 });
       expect(heading).toBeCloseTo(315, 0);
     });
   });

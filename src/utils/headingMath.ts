@@ -16,10 +16,11 @@ export function normalizeHeading(heading: number): number {
  */
 export function calculateHeading(data: MagnetometerData): number {
   // Calculate heading in radians, then convert to degrees
-  // Using atan2(x, -y) gives compass bearing where:
-  // - North (0, -1) → 0°, East (1, 0) → 90°, South (0, 1) → 180°, West (-1, 0) → 270°
-  const radians = Math.atan2(data.x, -data.y);
-  let degrees = radians * (180 / Math.PI);
+  // iOS magnetometer coordinate system: X points toward magnetic North
+  // Using atan2(-y, x) gives compass bearing where:
+  // - North (1, 0) → 0°, East (0, -1) → 90°, South (-1, 0) → 180°, West (0, 1) → 270°
+  const radians = Math.atan2(-data.y, data.x);
+  const degrees = radians * (180 / Math.PI);
 
   // Normalize to 0-359 range
   return normalizeHeading(degrees);
